@@ -1,0 +1,55 @@
+{
+  "name": "@nqnconsulting/tondemon-ai",
+  "version": "1.0.0",
+  "description": "TondemonAI — MuleSoft Teammate. Ask what is broken and it tells you where, why and how to fix it.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "tondemon-ai": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "src",
+    "playbook",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "slack": "node dist/slack.js",
+    "codex-desktop": "node scripts/codex-desktop-launch.mjs",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "inspect": "npx -y @modelcontextprotocol/inspector tsx src/index.ts",
+    "eval:tools": "node evals/tool-evals.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "observability",
+    "mulesoft",
+    "anypoint",
+    "salesforce",
+    "agentforce",
+    "integration"
+  ],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.106.0",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@slack/bolt": "^4.7.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nqnconsulting/tondemon-ai.git"
+  }
+}

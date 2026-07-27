@@ -1,0 +1,16 @@
+node_modules
+dist
+.git
+.github
+deploy
+evals
+examples
+playbook
+scripts
+**/*.md
+.env*
+*.log
+.DS_Store
+# Dockerfile COPYs playbook/ into the image — re-include it after the excludes above
+!playbook
+!playbook/**

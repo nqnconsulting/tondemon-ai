@@ -1,0 +1,57 @@
+# Tondemon AI — runs on your VPS. Caddy terminates TLS and reverse-proxies
+# to the MCP server. The CD workflow ships the image + this file; `.env` lives on
+# the server (never committed) and holds MCP_AUTH_TOKEN, DOMAIN and the source creds.
+services:
+  tondemon:
+    image: tondemon-ai:latest
+    container_name: tondemon-ai
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Bind-mounted playbook: tune the prompt on the server, recreate — no rebuild.
+      PLAYBOOK_FILE: /playbook/PLAYBOOK.md
+    expose:
+      - "8080"
+    volumes:
+      - ./playbook:/playbook:ro
+    # If using log-file mode instead of Anypoint, also mount logs and set MULE_LOG_DIR=/logs:
+    #   - /srv/mule-logs:/logs:ro
+
+  # Slack bridge — @mention/DM a Slack bot to query the estate. Uses Socket Mode
+  # (outbound WebSocket), so no ports/route are exposed. Reuses the same image,
+  # just a different entrypoint. Inactive unless the SLACK_* / ANTHROPIC_API_KEY
+  # vars are set in .env. It talks to the MCP server over the public HTTPS URL.
+  slack:
+    image: tondemon-ai:latest
+    container_name: tondemon-slack
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PLAYBOOK_FILE: /playbook/PLAYBOOK.md
+    command: ["node", "dist/slack.js"]
+    volumes:
+      - ./playbook:/playbook:ro
+    # The image's healthcheck probes :8080 — slack.js serves no port, so disable it.
+    healthcheck:
+      disable: true
+    depends_on:
+      - tondemon
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: tondemon-caddy
+    restart: unless-stopped
+    env_file: .env            # provides $DOMAIN to the Caddyfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - tondemon
+
+volumes:
+  caddy_data:
+  caddy_config:

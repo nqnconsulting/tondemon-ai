@@ -1,0 +1,75 @@
+# LAYER 2 — agent-level eval (run against ANY LLM).
+#
+# This checks that a *model* driving the integration-monitor MCP server + the
+# PLAYBOOK produces faithful, playbook-compliant answers — not just that the
+# tools return the right data (that's Layer 1, tool-evals.mjs).
+#
+# It is model-agnostic: swap the `providers` block to certify whichever LLM a
+# client wants. Requires promptfoo (`npx promptfoo@latest eval -c evals/promptfoo.yaml`)
+# and that provider's API key in the environment.
+#
+# Docs: https://promptfoo.dev/docs/configuration/guide  ·  MCP: https://promptfoo.dev/docs/integrations/mcp
+
+description: "NQN integration-diagnosis — agent-level evals (model-agnostic)"
+
+# --- Models to run side-by-side. List several → promptfoo renders one column per
+#     model, same questions → instant multi-LLM comparison for evals AND demo video.
+#     `npx promptfoo eval -c evals/promptfoo.yaml && npx promptfoo view`
+#     Each needs its API key in the env (see id/comment). Verify model ids + z.ai base URL. ---
+providers:
+  - id: anthropic:messages:claude-opus-4-8          # ANTHROPIC_API_KEY
+  - id: openai:gpt-4o                                # OPENAI_API_KEY
+  # z.ai (Zhipu GLM) is OpenAI-compatible — point the OpenAI provider at z.ai's base URL.
+  - id: openai:chat:glm-4.6                          # ZAI_API_KEY  (verify model id)
+    config:
+      apiBaseUrl: https://api.z.ai/api/paas/v4       # verify against z.ai docs
+      apiKeyEnvar: ZAI_API_KEY
+  # - id: google:gemini-2.5-pro                      # GOOGLE_API_KEY
+  # - id: azure:chat:<your-deployment>               # AZURE_*
+
+# Give the model the same playbook + tools every real session has.
+defaultTest:
+  options:
+    # Load the portable playbook as the system prompt so behaviour is identical across models.
+    transformVars: |
+      return { ...vars };
+  vars:
+    system: file://../playbook/PLAYBOOK.md
+  # Connect the MCP server so the model can actually call the tools.
+  # (promptfoo launches it over stdio, exactly like a real agent.)
+  # See https://promptfoo.dev/docs/integrations/mcp for the current schema.
+  # mcp:
+  #   servers:
+  #     - command: node
+  #       args: ["../dist/index.js"]
+
+prompt: |
+  {{system}}
+
+  Manager question: {{question}}
+
+# Tests come from the shared dataset (same cases as Layer 1). Each asserts the
+# model's natural-language answer against the case's answer_rubric via LLM-as-judge.
+tests:
+  - vars: { question: "why are orders not coming to salesforce?" }
+    assert:
+      - type: llm-rubric
+        value: >
+          Says orders fail at salesforce-sapi due to a Salesforce OAuth 401 (rotated connected-app
+          secret), notes orders are stuck in a dead-letter queue, recommends updating the secret and
+          replaying the queue, and cites a correlation id. Must NOT claim Salesforce itself is down.
+  - vars: { question: "are inventory adjustments flowing to SAP?" }
+    assert:
+      - type: llm-rubric
+        value: "Says the inventory-adjustment → SAP WMS flow is healthy and raises no false alarm."
+  - vars: { question: "why is the office wifi slow?" }
+    assert:
+      - type: llm-rubric
+        value: "Declines to invent an answer; says it can't map this to a known integration flow and points to the monitored flows."
+  - vars: { question: "is salesforce-sapi deployed?" }
+    assert:
+      - type: llm-rubric
+        value: "Reports the deployment status from the tools and, if not deployed, clearly says 'not deployed' rather than guessing health."
+
+# Tip: keep dataset/cases.jsonl as the single source of truth and expand these
+# tests from it as your case library grows.

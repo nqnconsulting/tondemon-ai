@@ -1,0 +1,12 @@
+# Auto-HTTPS for your domain → Tondemon AI MCP server.
+# $DOMAIN comes from .env (env_file). Caddy obtains a Let's Encrypt cert automatically
+# once the domain's DNS A record points at this server.
+{$DOMAIN} {
+	reverse_proxy tondemon:8080
+}
+
+# No domain yet? Comment the block above and use this to serve plain HTTP on :80
+# (token-guarded, but unencrypted — demo only):
+# :80 {
+# 	reverse_proxy tondemon:8080
+# }
